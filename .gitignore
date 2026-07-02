@@ -1,0 +1,15 @@
+# 절대 커밋 금지 — 인증정보
+*.json
+.streamlit/secrets.toml
+google-oauth-*.json
+*credentials*
+*token*
+
+# 파이썬
+__pycache__/
+*.pyc
+.venv/
+
+# 데이터/로그 (실데이터가 파일로 새어나가지 않도록)
+*.csv
+*.log
