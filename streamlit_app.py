@@ -121,11 +121,7 @@ with col1:
     m = promo.melt(id_vars="프로모션", value_vars=["광고비", "매출"], var_name="지표", value_name="원")
     fig = px.bar(m, x="프로모션", y="원", color="지표", barmode="group",
                  title="프로모션별 광고비 vs 매출", **PLOT)
-    # ROAS 라벨을 매출 막대 위에
-    for _, r in promo.iterrows():
-        if pd.notna(r["ROAS(%)"]):
-            fig.add_annotation(x=r["프로모션"], y=r["매출"], text=f"ROAS {r['ROAS(%)']:.0f}%",
-                               showarrow=False, yshift=12, font=dict(size=10, color="#555"))
+    fig.update_layout(margin=dict(t=40))
     st.plotly_chart(fig, use_container_width=True)
 with col2:
     bud = promo[promo["예산"].notna()].copy()
@@ -135,8 +131,19 @@ with col2:
                 text=[f"{v:.0f}%" for v in bud["소진율(%)"]], textposition="outside")
     fig.add_vline(x=100, line_dash="dash", line_color="#888", annotation_text="예산 100%")
     fig.update_layout(title="프로모션별 예산 소진율", xaxis_title="소진율(%)",
-                      yaxis=dict(categoryorder="total ascending"), margin=dict(l=10, r=40))
+                      yaxis=dict(categoryorder="total ascending"), margin=dict(l=10, r=40, t=40))
     st.plotly_chart(fig, use_container_width=True)
+
+# 프로모션별 ROAS (손익분기 100% 기준선) — 광고비 스케일에 눌리지 않게 별도 표시
+roas_df = promo[promo["ROAS(%)"].notna()].sort_values("ROAS(%)")
+fig = go.Figure()
+fig.add_bar(y=roas_df["프로모션"], x=roas_df["ROAS(%)"], orientation="h",
+            marker_color=["#d73027" if v < 100 else "#4575b4" for v in roas_df["ROAS(%)"]],
+            text=[f"{v:.0f}%" for v in roas_df["ROAS(%)"]], textposition="outside")
+fig.add_vline(x=100, line_dash="dash", line_color="#888", annotation_text="손익분기 100%")
+fig.update_layout(title="프로모션별 ROAS (100% 미만=빨강)", xaxis_title="ROAS(%)",
+                  margin=dict(l=10, r=50, t=40), height=max(240, 40 * len(roas_df)))
+st.plotly_chart(fig, use_container_width=True)
 
 st.divider()
 
@@ -153,14 +160,19 @@ if item.empty:
 else:
     item["ROAS(%)"] = (item["매출"] / item["광고비"] * 100).round(0)
     item = item.sort_values("매출", ascending=False)
-    m = item.melt(id_vars="품목", value_vars=["광고비", "매출"], var_name="지표", value_name="원")
-    fig = px.bar(m, x="품목", y="원", color="지표", barmode="group",
-                 title=f"[{sel_promo}] 품목별 광고비 vs 매출", **PLOT)
-    for _, r in item.iterrows():
-        if pd.notna(r["ROAS(%)"]):
-            fig.add_annotation(x=r["품목"], y=r["매출"], text=f"ROAS {r['ROAS(%)']:.0f}%",
-                               showarrow=False, yshift=12, font=dict(size=10, color="#555"))
-    st.plotly_chart(fig, use_container_width=True)
+    cc1, cc2 = st.columns([3, 2])
+    with cc1:
+        m = item.melt(id_vars="품목", value_vars=["광고비", "매출"], var_name="지표", value_name="원")
+        fig = px.bar(m, x="품목", y="원", color="지표", barmode="group",
+                     title=f"[{sel_promo}] 품목별 광고비 vs 매출", **PLOT)
+        fig.update_layout(margin=dict(t=40))
+        st.plotly_chart(fig, use_container_width=True)
+    with cc2:
+        t = item.copy()
+        t["광고비"] = t["광고비"].map(lambda x: f"{x:,.0f}")
+        t["매출"] = t["매출"].map(lambda x: f"{x:,.0f}")
+        t["ROAS(%)"] = t["ROAS(%)"].map(lambda x: "-" if pd.isna(x) else f"{x:,.0f}%")
+        st.dataframe(t[["품목", "광고비", "매출", "ROAS(%)"]], use_container_width=True, hide_index=True)
 
 # ------------------------------------------------------------------ 상세 (접기)
 with st.expander("캠페인별 매출 Top 15"):
