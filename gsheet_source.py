@@ -4,6 +4,7 @@
 - 우선순위 2: 로컬 OAuth 토큰(~/.claude/google-oauth-token.json) → 내 PC에서 개발/테스트 시
 서비스계정을 쓰려면 대상 구글 시트를 서비스계정 이메일에 '뷰어'로 공유해야 함.
 """
+# rev: report-v2 (load_values 포함) — 캐시 강제 무효화용 마커
 import json
 import os
 

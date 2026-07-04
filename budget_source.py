@@ -2,8 +2,27 @@
 summary 탭에서 프로모션별 예산을 파싱.
 summary는 사람이 보는 리포트 형식(병합셀·총계행)이라, '예산' 헤더 열을 찾은 뒤
 그 열에 숫자가 채워진 행(=각 프로모션의 예산 행)만 골라낸다. 행 위치에 의존하지 않아 견고함.
+
+주의: gsheet_source.load_values 에 의존하지 않고, 기존부터 존재하는 _get_credentials 만 재사용해
+      자체적으로 시트 원본을 읽는다 (배포 환경에서 gsheet_source 캐시 이슈를 회피).
 """
-from gsheet_source import load_values
+import streamlit as st
+
+from gsheet_source import _get_credentials
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def _load_values(spreadsheet_id: str, sheet_name: str):
+    from googleapiclient.discovery import build
+    creds = _get_credentials()
+    service = build("sheets", "v4", credentials=creds)
+    result = (
+        service.spreadsheets()
+        .values()
+        .get(spreadsheetId=spreadsheet_id, range=f"'{sheet_name}'!A:Z")
+        .execute()
+    )
+    return result.get("values", [])
 
 
 def _num(s):
@@ -20,7 +39,7 @@ def _num(s):
 
 def get_promo_budgets(spreadsheet_id: str, sheet_name: str = "summary") -> dict:
     """{프로모션명: {'예산': float, 'start': str, 'end': str}} 반환."""
-    vals = load_values(spreadsheet_id, sheet_name)
+    vals = _load_values(spreadsheet_id, sheet_name)
     hdr_idx = col_promo = col_budget = None
     col_start = col_end = None
     for i, row in enumerate(vals):
