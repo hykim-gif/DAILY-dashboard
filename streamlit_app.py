@@ -54,6 +54,17 @@ if df.empty:
 # ------------------------------------------------------------------ 필터
 st.sidebar.header("필터")
 
+# 날짜 범위 (기본=전체 기간)
+period_note = "전체 기간"
+if "일자" in df.columns and df["일자"].notna().any():
+    dmin, dmax = df["일자"].min().date(), df["일자"].max().date()
+    if dmin != dmax:
+        dr = st.sidebar.date_input("기간", (dmin, dmax), min_value=dmin, max_value=dmax)
+        if isinstance(dr, (tuple, list)) and len(dr) == 2:
+            df = df[(df["일자"] >= pd.Timestamp(dr[0])) & (df["일자"] <= pd.Timestamp(dr[1]))]
+            if (dr[0], dr[1]) != (dmin, dmax):
+                period_note = f"{dr[0]} ~ {dr[1]}"
+
 
 def multi(col, label):
     if col not in df.columns:
@@ -92,13 +103,14 @@ tot_budget = promo["예산"].dropna().sum()
 spend_of_budgeted = promo.loc[promo["예산"].notna(), "광고비"].sum()
 burn = (spend_of_budgeted / tot_budget * 100) if tot_budget else 0
 
-st.subheader("전체 요약")
+st.subheader(f"전체 요약  ·  {period_note}")
 c = st.columns(4)
 c[0].metric("총 광고비", won(tot_cost))
 c[1].metric("총 매출", won(tot_rev))
 c[2].metric("블렌디드 ROAS", pct(blended_roas))
 c[3].metric("예산 소진율", pct(burn), help=f"예산 있는 프로모션 기준: {won(spend_of_budgeted)} / {won(tot_budget)}")
-st.caption("※ 소진율 = raw_total 누적 광고비 ÷ summary 예산. 집계 기준이 달라 공식 리포트 진척률과 소폭 다를 수 있음(추정).")
+st.caption(f"※ 모든 수치는 선택 기간({period_note}) 기준. 소진율 = 해당 기간 광고비 ÷ summary 예산 → "
+           "기간을 좁히면 소진율도 낮게 나옴. 집계 기준 차이로 공식 리포트와 소폭 다를 수 있음(추정).")
 
 st.divider()
 
