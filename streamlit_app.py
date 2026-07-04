@@ -136,15 +136,33 @@ with col1:
     fig.update_layout(margin=dict(t=40))
     st.plotly_chart(fig, use_container_width=True)
 with col2:
-    bud = promo[promo["예산"].notna()].copy()
-    fig = go.Figure()
-    fig.add_bar(y=bud["프로모션"], x=bud["소진율(%)"], orientation="h",
-                marker_color=["#d73027" if v > 100 else "#1a9850" for v in bud["소진율(%)"]],
-                text=[f"{v:.0f}%" for v in bud["소진율(%)"]], textposition="outside")
-    fig.add_vline(x=100, line_dash="dash", line_color="#888", annotation_text="예산 100%")
-    fig.update_layout(title="프로모션별 예산 소진율", xaxis_title="소진율(%)",
-                      yaxis=dict(categoryorder="total ascending"), margin=dict(l=10, r=40, t=40))
-    st.plotly_chart(fig, use_container_width=True)
+    # 프로모션 기간 간트차트 (색 = ROAS%)
+    rows = []
+    for _, r in promo.iterrows():
+        p = r["프로모션"]
+        b = budgets.get(p)
+        if b and b.get("start") and b.get("end"):
+            rows.append({"프로모션": p, "start": b["start"], "end": b["end"],
+                         "ROAS(%)": r["ROAS(%)"], "광고비": r["광고비"], "매출": r["매출"]})
+    if rows:
+        g = pd.DataFrame(rows)
+        g["start"] = pd.to_datetime(g["start"], errors="coerce")
+        g["end"] = pd.to_datetime(g["end"], errors="coerce") + pd.Timedelta(days=1)  # 종료일 포함 + 하루짜리 보정
+        g = g.dropna(subset=["start", "end"])
+        g["label"] = g["ROAS(%)"].map(lambda v: "-" if pd.isna(v) else f"{v:.0f}%")
+        fig = px.timeline(
+            g, x_start="start", x_end="end", y="프로모션", color="ROAS(%)", text="label",
+            color_continuous_scale="RdYlGn", range_color=[0, 200],
+            title="프로모션 기간 (색 = ROAS%)",
+            hover_data={"광고비": ":,.0f", "매출": ":,.0f", "start": True, "end": False},
+        )
+        fig.update_yaxes(autorange="reversed", title=None)
+        fig.update_xaxes(title=None)
+        fig.update_traces(textposition="inside", insidetextanchor="middle")
+        fig.update_layout(margin=dict(l=10, r=20, t=40), coloraxis_colorbar=dict(title="ROAS%"))
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("기간 정보가 있는 프로모션이 없습니다.")
 
 # 프로모션별 ROAS (손익분기 100% 기준선) — 광고비 스케일에 눌리지 않게 별도 표시
 roas_df = promo[promo["ROAS(%)"].notna()].sort_values("ROAS(%)")
