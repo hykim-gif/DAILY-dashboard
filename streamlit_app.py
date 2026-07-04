@@ -17,7 +17,7 @@ SPREADSHEET_ID = "16x2eJrpKkKX8o--4u4PPwTfDjCEdi6wAloXRlpzQrxo"
 RAW_SHEET = "raw_total"
 SUMMARY_SHEET = "summary"
 
-st.set_page_config(page_title="올리브영 프로모션 리포트", page_icon="📈", layout="wide")
+st.set_page_config(page_title="(매드업) 비플레인 Monthly Review", page_icon="📈", layout="wide")
 PLOT = dict(color_discrete_sequence=px.colors.qualitative.Set2)
 
 
@@ -32,7 +32,7 @@ def pct(n):
 # ------------------------------------------------------------------ 데이터 로드
 col_l, col_r = st.columns([5, 1])
 with col_l:
-    st.title("📈 올리브영 프로모션 리포트")
+    st.title("📈 (매드업) 비플레인 Monthly Review")
     st.caption("실적=`raw_total` · 예산=`summary` 실시간 연동 (5분 캐시)")
 with col_r:
     st.write("")
