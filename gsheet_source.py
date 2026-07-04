@@ -56,3 +56,18 @@ def load_sheet(spreadsheet_id: str, sheet_name: str) -> pd.DataFrame:
     width = len(header)
     rows = [r + [""] * (width - len(r)) for r in rows]
     return pd.DataFrame(rows, columns=header)
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def load_values(spreadsheet_id: str, sheet_name: str):
+    """헤더가 불규칙한 시트(예: summary)용 — 원본 2D 리스트 그대로 반환."""
+    from googleapiclient.discovery import build
+    creds = _get_credentials()
+    service = build("sheets", "v4", credentials=creds)
+    result = (
+        service.spreadsheets()
+        .values()
+        .get(spreadsheetId=spreadsheet_id, range=f"'{sheet_name}'!A:Z")
+        .execute()
+    )
+    return result.get("values", [])
